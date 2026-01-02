@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "Bash(mvn clean install:*)",
+      "Bash(java:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(./stop.sh:*)",
+      "Bash(./start.sh:*)",
+      "Bash(./build.sh:*)"
+    ]
+  }
+}
