@@ -1,4 +1,38 @@
 services:
+  redis-svc:
+    image: registry.cn-hangzhou.aliyuncs.com/sherry/redis:8.4.0
+    container_name: redis
+    networks:
+      - nebula-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD","redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    sysctls:
+      - net.core.somaxconn=65535
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65535
+        hard: 65535
+  pg-svc:
+    image: registry.cn-hangzhou.aliyuncs.com/sherry/postgres:17
+    container_name: postgres
+    networks:
+      - nebula-network
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123456
+    volumes:
+      - /vol1/1000/docker/nebula/postgresql/data:/var/lib/postgresql/data
+    ports:
+      - "35433:5432"
+    restart: unless-stopped
   auth-svc:
     image: registry.cn-hangzhou.aliyuncs.com/sherry/nebula-auth:${IMAGE_VERSION:-latest}
     container_name: auth

@@ -11,7 +11,8 @@
       "Bash(chmod:*)",
       "Bash(./stop.sh:*)",
       "Bash(./start.sh:*)",
-      "Bash(./build.sh:*)"
+      "Bash(./build.sh:*)",
+      "Bash(find:*)"
     ]
   }
 }
