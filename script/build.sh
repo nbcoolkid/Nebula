@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 本次构建的镜像版本
-IMAGE_VERSION=1
+IMAGE_VERSION=2
 
 # Project root directory
 # 脚本所在路径
