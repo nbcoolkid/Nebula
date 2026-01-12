@@ -1,5 +1,6 @@
 # Nebula
-My Personal Project for fun
+
+个人中后台管理系统，后端是权限开发的，前端是基于art-design-pro的
 
 # 启动项目
 

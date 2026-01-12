@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #############################################
-# Nebula Server - Stop All Services Script
-# This script stops all running Spring Boot
-# services in the server directory
+# Nebula - Stop All Services Script
+# This script stops all running services
+# including Spring Boot services and Docker containers
 #############################################
 
 # Colors for output
@@ -12,14 +12,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Server directory (parent of script directory)
-SERVER_DIR="$(cd "$SCRIPT_DIR/../server" && pwd)"
-
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  Stopping Nebula Server Services${NC}"
+echo -e "${GREEN}  Stopping Nebula Services${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -67,8 +61,22 @@ graceful_stop() {
     fi
 }
 
+# Function to stop a Docker container
+stop_docker_container() {
+    local container_name=$1
+
+    if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
+        echo -e "${YELLOW}Stopping Docker container: $container_name...${NC}"
+        docker stop "$container_name" > /dev/null 2>&1
+        docker rm "$container_name" > /dev/null 2>&1
+        echo -e "${GREEN}✓ $container_name stopped and removed${NC}"
+    else
+        echo -e "${YELLOW}○ $container_name is not running${NC}"
+    fi
+}
+
 # Stop services by port
-echo "Stopping services by port..."
+echo "Stopping Spring Boot services by port..."
 echo ""
 
 # Stop Gateway Service (Port 8080)
@@ -95,6 +103,13 @@ else
 fi
 
 echo ""
+echo "Stopping Docker containers..."
+
+# Stop UI container
+stop_docker_container "nebula-ui"
+
+echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  All services stopped${NC}"
 echo -e "${GREEN}========================================${NC}"
+

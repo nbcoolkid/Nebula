@@ -38,6 +38,15 @@ check_maven() {
     print_message "$GREEN" "✓ Maven is installed"
 }
 
+# Function to check if Docker is installed
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        print_message "$RED" "Error: Docker is not installed or not in PATH"
+        exit 1
+    fi
+    print_message "$GREEN" "✓ Docker is installed"
+}
+
 # Function to check if port is in use
 is_port_in_use() {
     local port=$1
@@ -117,16 +126,75 @@ start_service() {
     fi
 }
 
+# Function to start a Docker service
+start_docker_service() {
+    local service_name=$1
+    local image_name=$2
+    local container_name=$3
+    local internal_port=$4
+    local external_port=$5
+
+    print_message "$BLUE" "----------------------------------------"
+    print_message "$BLUE" "Starting $service_name"
+    print_message "$BLUE" "----------------------------------------"
+
+    # Check if container is already running
+    if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
+        print_message "$YELLOW" "○ $service_name is already running"
+        return 0
+    fi
+
+    # Check if container exists but is stopped
+    if docker ps -a --format '{{.Names}}' | grep -q "^${container_name}$"; then
+        print_message "$YELLOW" "Removing existing container $container_name..."
+        docker rm "$container_name" > /dev/null 2>&1
+    fi
+
+    # Check if image exists
+    if ! docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${image_name}$"; then
+        print_message "$RED" "✗ Docker image not found: $image_name"
+        print_message "$YELLOW" "Please run ./build.sh first to build the image"
+        return 1
+    fi
+
+    # Start the container
+    print_message "$YELLOW" "Starting $service_name in Docker..."
+    print_message "$YELLOW" "  Image: $image_name"
+    print_message "$YELLOW" "  Container: $container_name"
+    print_message "$YELLOW" "  Port: $external_port -> $internal_port"
+
+    docker run -d \
+        --name "$container_name" \
+        -p "$external_port:$internal_port" \
+        "$image_name" > /dev/null
+
+    if [ $? -eq 0 ]; then
+        print_message "$GREEN" "✓ $service_name started successfully"
+
+        # Wait for container to be ready
+        if wait_for_service "$service_name" $external_port; then
+            return 0
+        else
+            print_message "$RED" "✗ Failed to start $service_name"
+            return 1
+        fi
+    else
+        print_message "$RED" "✗ Failed to start $service_name"
+        return 1
+    fi
+}
+
 # Main execution
 echo ""
 print_message "$GREEN" "========================================"
-print_message "$GREEN"  "  Starting Nebula Server Services"
+print_message "$GREEN"  "  Starting Nebula Services"
 print_message "$GREEN"  "========================================"
 echo ""
 
 # Check prerequisites
 print_message "$BLUE" "Checking prerequisites..."
 check_maven
+check_docker
 echo ""
 
 # Check if server directory exists
@@ -139,12 +207,13 @@ print_message "$GREEN" "✓ Server directory: $SERVER_DIR"
 echo ""
 
 # Start services
-# Note: Common module is not a service, so we only start auth and gateway
+# Note: Common module is not a service, so we only start auth, gateway, and ui
 
 # 1. Start Auth Service first
 print_message "$YELLOW" "Starting services in order:"
 print_message "$YELLOW" "  1. Auth Service (dependency for others)"
 print_message "$YELLOW" "  2. Gateway Service (entry point)"
+print_message "$YELLOW" "  3. UI Service (frontend)"
 echo ""
 
 start_service "Auth Service" "auth" 8081
@@ -162,14 +231,26 @@ if [ $? -ne 0 ]; then
 fi
 echo ""
 
+# 3. Start UI Service
+# Use registry.cn-hangzhou.aliyuncs.com/sherry/nebula-ui:latest by default
+# Set IMAGE_VERSION environment variable to use a different version
+UI_VERSION="${IMAGE_VERSION:-latest}"
+start_docker_service "UI Service" "registry.cn-hangzhou.aliyuncs.com/sherry/nebula-ui:${UI_VERSION}" "nebula-ui" 8080 3000
+if [ $? -ne 0 ]; then
+    print_message "$RED" "Failed to start UI Service"
+    print_message "$YELLOW" "Continuing with backend services only..."
+fi
+echo ""
+
 # Summary
 print_message "$GREEN" "========================================"
-print_message "$GREEN"  "  All Services Started Successfully"
+print_message "$GREEN"  "  Services Started"
 print_message "$GREEN"  "========================================"
 echo ""
 print_message "$BLUE" "Service Status:"
 echo "  - Auth Service:  http://localhost:8081"
 echo "  - Gateway:       http://localhost:8080"
+echo "  - UI:            http://localhost:3000"
 echo ""
 print_message "$BLUE" "API Endpoints:"
 echo "  - Health (Auth):     http://localhost:8081/actuator/health"
